@@ -9,11 +9,14 @@ import Handlebars from 'handlebars';
 import {
   ArrowLeft,
   Code2,
+  Columns2,
   Database,
   Download,
+  Eye,
   Grid3X3,
   LayoutTemplate,
   Loader2,
+  Maximize2,
   Play,
   Plus,
   Save,
@@ -121,7 +124,10 @@ export function ReportBuilder({ initialData }: Props) {
   const [activeTab, setActiveTab] = useState<
     'studio' | 'visual' | 'template' | 'sql'
   >(isEdit ? 'template' : 'studio');
-  const [zoom, setZoom] = useState(0.65);
+  const [layoutMode, setLayoutMode] = useState<'editor' | 'split' | 'preview'>(
+    'split',
+  );
+  const [zoom, setZoom] = useState(0.45);
 
   const [queryResults, setQueryResults] = useState<
     Record<string, QueryResultState>
@@ -142,6 +148,15 @@ export function ReportBuilder({ initialData }: Props) {
     queryKey: ['buckets'],
     queryFn: async () => (await api.get<Bucket[]>('/buckets')).data,
   });
+
+  function handleLayoutChange(next: 'editor' | 'split' | 'preview') {
+    setLayoutMode(next);
+    if (next === 'split' && zoom > 0.5) {
+      setZoom(0.45);
+    } else if (next === 'preview' && zoom < 0.65) {
+      setZoom(0.8);
+    }
+  }
 
   function handleStudioChange(nextBands: StudioBand[]) {
     setStudioBands(nextBands);
@@ -415,10 +430,10 @@ ${cells}
   }, [activeTab, blocks, htmlTemplate, pageSettings, previewContext]);
 
   return (
-    <div className="flex h-[calc(100vh-3rem)] flex-col gap-4">
+    <div className="flex h-[calc(100vh-3rem)] flex-col gap-3">
       {/* Top Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white px-4 py-3 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-xl border bg-white px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
             href={bucketId ? `/reports?bucket_id=${bucketId}` : '/reports'}
             className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"
@@ -443,32 +458,75 @@ ${cells}
             placeholder="Report Name (e.g. Bill of Lading)"
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
-            className="w-48 rounded-lg border px-3 py-1.5 text-sm font-medium"
+            className="w-44 rounded-lg border px-2.5 py-1.5 text-sm font-medium"
           />
 
-          <div className="flex items-center rounded-lg border bg-slate-50 px-2.5 py-1.5 text-xs text-slate-500">
+          <div className="flex items-center rounded-lg border bg-slate-50 px-2 py-1.5 text-xs text-slate-500">
             <span>/reports/</span>
             <input
               placeholder="bill-of-lading"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
-              className="w-32 bg-transparent font-mono text-slate-900 focus:outline-none"
+              className="w-28 bg-transparent font-mono text-slate-900 focus:outline-none"
             />
             <span>/pdf</span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Workspace Layout Switcher */}
+          <div className="flex items-center rounded-lg border bg-slate-50 p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => handleLayoutChange('editor')}
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
+                layoutMode === 'editor'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title="Full-width Editor"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              Editor
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLayoutChange('split')}
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
+                layoutMode === 'split'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title="70/30 Split View"
+            >
+              <Columns2 className="h-3.5 w-3.5" />
+              Split
+            </button>
+            <button
+              type="button"
+              onClick={() => handleLayoutChange('preview')}
+              className={`inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium transition ${
+                layoutMode === 'preview'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+              title="Full-width Live Preview"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Preview
+            </button>
+          </div>
+
           {isEdit && (
             <button
               onClick={handleTestDownloadPdf}
               disabled={downloadingPdf}
-              className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium hover:bg-slate-50 disabled:opacity-50"
             >
               {downloadingPdf ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Download className="h-4 w-4" />
+                <Download className="h-3.5 w-3.5" />
               )}
               Test PDF
             </button>
@@ -477,14 +535,14 @@ ${cells}
           <button
             onClick={handleSave}
             disabled={saving || !name || !slug}
-            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-50"
           >
             {saving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Save className="h-4 w-4" />
+              <Save className="h-3.5 w-3.5" />
             )}
-            {isEdit ? 'Update Template' : 'Save Template'}
+            {isEdit ? 'Update' : 'Save'}
           </button>
         </div>
       </div>
@@ -495,378 +553,395 @@ ${cells}
         </div>
       )}
 
-      {/* Split Pane Workspace */}
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
-        {/* Left Pane: Studio Canvas / Visual / HTML / Queries */}
-        <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
-          <div className="flex border-b bg-slate-50 px-2 pt-2">
-            <button
-              onClick={() => setActiveTab('studio')}
-              className={`inline-flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold ${
-                activeTab === 'studio'
-                  ? 'border border-b-white bg-white text-slate-900'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <Grid3X3 className="h-3.5 w-3.5" />
-              Studio Canvas
-            </button>
-            <button
-              onClick={() => setActiveTab('visual')}
-              className={`inline-flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold ${
-                activeTab === 'visual'
-                  ? 'border border-b-white bg-white text-slate-900'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <LayoutTemplate className="h-3.5 w-3.5" />
-              Blocks
-            </button>
-            <button
-              onClick={() => setActiveTab('template')}
-              className={`inline-flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold ${
-                activeTab === 'template'
-                  ? 'border border-b-white bg-white text-slate-900'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <Code2 className="h-3.5 w-3.5" />
-              HTML / Handlebars
-            </button>
-            <button
-              onClick={() => setActiveTab('sql')}
-              className={`inline-flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold ${
-                activeTab === 'sql'
-                  ? 'border border-b-white bg-white text-slate-900'
-                  : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <Database className="h-3.5 w-3.5" />
-              Queries ({queries.length})
-            </button>
-          </div>
-
-          {activeTab === 'studio' && (
-            <JasperCanvas
-              bands={studioBands}
-              pageSettings={pageSettings}
-              datasetSchemas={datasetSchemas}
-              onChange={handleStudioChange}
-              onPageSettingsChange={handlePageSettingsChange}
-            />
-          )}
-
-          {activeTab === 'visual' && (
-            <VisualBuilderPane
-              blocks={blocks}
-              pageSettings={pageSettings}
-              datasetSchemas={datasetSchemas}
-              onChange={handleBlocksChange}
-              onPageSettingsChange={handlePageSettingsChange}
-            />
-          )}
-
-          {activeTab === 'template' && (
-            <div className="flex min-h-0 flex-1 flex-col">
-              {datasetSchemas.length > 0 && (
-                <div className="flex max-h-24 flex-wrap items-center gap-1.5 overflow-y-auto border-b bg-slate-50 px-3 py-2">
-                  {datasetSchemas.map((ds) => (
-                    <div key={ds.key} className="flex flex-wrap items-center gap-1">
-                      <span className="text-[11px] font-semibold text-slate-500">
-                        {ds.key}:
-                      </span>
-                      {ds.columns.map((col) => (
-                        <button
-                          key={`${ds.key}.${col}`}
-                          onClick={() =>
-                            insertFieldSnippet(
-                              ds.mode === 'single'
-                                ? `{{default ${ds.key}.${col} ""}}`
-                                : `{{default this.${col} ""}}`,
-                            )
-                          }
-                          className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
-                        >
-                          {col}
-                        </button>
-                      ))}
-                      {ds.mode === 'list' && (
-                        <button
-                          onClick={() => insertTableForDataset(ds.key, ds.columns)}
-                          className="rounded bg-slate-900 px-1.5 py-0.5 text-[11px] font-medium text-white hover:bg-slate-700"
-                        >
-                          + Table
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="min-h-0 flex-1">
-                <Editor
-                  height="100%"
-                  defaultLanguage="html"
-                  value={htmlTemplate}
-                  onChange={(v) => setHtmlTemplate(v ?? '')}
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 13,
-                    wordWrap: 'on',
-                  }}
-                />
-              </div>
+      {/* Fluid Workspace */}
+      <div className="flex min-h-0 flex-1 gap-3">
+        {/* Left Pane: Studio Canvas / Blocks / HTML / Queries */}
+        {layoutMode !== 'preview' && (
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border bg-white shadow-sm">
+            <div className="flex border-b bg-slate-50 px-2 pt-2">
+              <button
+                onClick={() => setActiveTab('studio')}
+                className={`inline-flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold ${
+                  activeTab === 'studio'
+                    ? 'border border-b-white bg-white text-slate-900'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Grid3X3 className="h-3.5 w-3.5" />
+                Studio Canvas
+              </button>
+              <button
+                onClick={() => setActiveTab('visual')}
+                className={`inline-flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold ${
+                  activeTab === 'visual'
+                    ? 'border border-b-white bg-white text-slate-900'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <LayoutTemplate className="h-3.5 w-3.5" />
+                Blocks
+              </button>
+              <button
+                onClick={() => setActiveTab('template')}
+                className={`inline-flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold ${
+                  activeTab === 'template'
+                    ? 'border border-b-white bg-white text-slate-900'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Code2 className="h-3.5 w-3.5" />
+                HTML / Handlebars
+              </button>
+              <button
+                onClick={() => setActiveTab('sql')}
+                className={`inline-flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-xs font-semibold ${
+                  activeTab === 'sql'
+                    ? 'border border-b-white bg-white text-slate-900'
+                    : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Database className="h-3.5 w-3.5" />
+                Queries ({queries.length})
+              </button>
             </div>
-          )}
 
-          {activeTab === 'sql' && (
-            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
-              <div className="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={addQueryRow}
-                  className="inline-flex items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Query
-                </button>
+            {activeTab === 'studio' && (
+              <JasperCanvas
+                bands={studioBands}
+                pageSettings={pageSettings}
+                datasetSchemas={datasetSchemas}
+                onChange={handleStudioChange}
+                onPageSettingsChange={handlePageSettingsChange}
+              />
+            )}
 
-                <button
-                  type="button"
-                  onClick={handleRunAllQueries}
-                  disabled={runningSql || queries.length === 0}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                >
-                  {runningSql ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Play className="h-3.5 w-3.5" />
-                  )}
-                  Run All Queries
-                </button>
-              </div>
+            {activeTab === 'visual' && (
+              <VisualBuilderPane
+                blocks={blocks}
+                pageSettings={pageSettings}
+                datasetSchemas={datasetSchemas}
+                onChange={handleBlocksChange}
+                onPageSettingsChange={handlePageSettingsChange}
+              />
+            )}
 
-              <div>
-                <label className="mb-1 block text-xs font-medium text-slate-500">
-                  Shared Query Parameters (JSON)
-                </label>
-                <input
-                  value={sqlParams}
-                  onChange={(e) => setSqlParams(e.target.value)}
-                  placeholder='{"blNo": "SSLSGJKTPAE1373"}'
-                  className="w-full rounded-lg border px-3 py-1.5 font-mono text-xs"
-                />
-              </div>
-
-              {sqlError && (
-                <div className="rounded-lg bg-red-50 p-2.5 text-xs text-red-600">
-                  {sqlError}
-                </div>
-              )}
-
-              {queries.length === 0 ? (
-                <div className="rounded-lg border border-dashed p-6 text-center text-xs text-slate-400">
-                  No SQL queries configured yet. Click &quot;Add Query&quot; to
-                  pull single form values (e.g. <code>bl_header</code>) or table
-                  lists (e.g. <code>containers</code>) from any DataSource.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {queries.map((q, idx) => {
-                    const res = queryResults[q.key.trim()];
-                    return (
+            {activeTab === 'template' && (
+              <div className="flex min-h-0 flex-1 flex-col">
+                {datasetSchemas.length > 0 && (
+                  <div className="flex max-h-24 flex-wrap items-center gap-1.5 overflow-y-auto border-b bg-slate-50 px-3 py-2">
+                    {datasetSchemas.map((ds) => (
                       <div
-                        key={idx}
-                        className="space-y-2 rounded-lg border bg-slate-50 p-3"
+                        key={ds.key}
+                        className="flex flex-wrap items-center gap-1"
                       >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <input
-                            value={q.key}
-                            onChange={(e) => {
-                              const next = [...queries];
-                              next[idx] = { ...next[idx], key: e.target.value };
-                              setQueries(next);
-                            }}
-                            placeholder="key (e.g. bl_header)"
-                            className="w-36 rounded border bg-white px-2 py-1 font-mono text-xs font-semibold"
-                          />
-
-                          <select
-                            value={q.data_source_id}
-                            onChange={(e) => {
-                              const next = [...queries];
-                              next[idx] = {
-                                ...next[idx],
-                                data_source_id: e.target.value,
-                              };
-                              setQueries(next);
-                            }}
-                            className="flex-1 rounded border bg-white px-2 py-1 text-xs"
-                          >
-                            <option value="">-- DataSource --</option>
-                            {datasources.map((ds) => (
-                              <option key={ds.id} value={ds.id}>
-                                {ds.name} ({ds.client})
-                              </option>
-                            ))}
-                          </select>
-
-                          <select
-                            value={q.result_mode}
-                            onChange={(e) => {
-                              const next = [...queries];
-                              next[idx] = {
-                                ...next[idx],
-                                result_mode: e.target.value as
-                                  | 'single'
-                                  | 'list',
-                              };
-                              setQueries(next);
-                            }}
-                            className="rounded border bg-white px-2 py-1 text-xs"
-                          >
-                            <option value="single">Single (1 row)</option>
-                            <option value="list">List (Table)</option>
-                          </select>
-
+                        <span className="text-[11px] font-semibold text-slate-500">
+                          {ds.key}:
+                        </span>
+                        {ds.columns.map((col) => (
                           <button
-                            type="button"
+                            key={`${ds.key}.${col}`}
                             onClick={() =>
-                              setQueries(queries.filter((_, i) => i !== idx))
+                              insertFieldSnippet(
+                                ds.mode === 'single'
+                                  ? `{{default ${ds.key}.${col} ""}}`
+                                  : `{{default this.${col} ""}}`,
+                              )
                             }
-                            className="text-slate-400 hover:text-red-600"
-                            title="Remove query"
+                            className="rounded bg-white px-1.5 py-0.5 font-mono text-[11px] text-slate-700 ring-1 ring-slate-200 hover:bg-slate-100"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            {col}
                           </button>
-                        </div>
-
-                        <textarea
-                          rows={3}
-                          value={q.sql}
-                          onChange={(e) => {
-                            const next = [...queries];
-                            next[idx] = { ...next[idx], sql: e.target.value };
-                            setQueries(next);
-                          }}
-                          placeholder="SELECT * FROM ... WHERE id = :id"
-                          className="w-full rounded border bg-white px-2.5 py-1.5 font-mono text-xs"
-                        />
-
-                        {res && (
-                          <div className="flex items-center justify-between text-[11px] text-slate-500">
-                            <span>
-                              Returned {res.rows.length} rows ·{' '}
-                              {res.columns.length} cols ({res.durationMs}ms)
-                            </span>
-                            {res.mode === 'list' && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  insertTableForDataset(
-                                    q.key.trim(),
-                                    res.columns,
-                                  )
-                                }
-                                className="font-medium text-slate-900 underline"
-                              >
-                                Insert HTML Table →
-                              </button>
-                            )}
-                          </div>
+                        ))}
+                        {ds.mode === 'list' && (
+                          <button
+                            onClick={() =>
+                              insertTableForDataset(ds.key, ds.columns)
+                            }
+                            className="rounded bg-slate-900 px-1.5 py-0.5 text-[11px] font-medium text-white hover:bg-slate-700"
+                          >
+                            + Table
+                          </button>
                         )}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Right Pane: Multi-Page Fluid Live Preview */}
-        <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border bg-slate-200 shadow-sm">
-          <div className="flex items-center justify-between border-b bg-white px-4 py-2 text-xs font-semibold text-slate-600">
-            <span>
-              Live Preview ({pageSettings.paperSize} · {pageSettings.orientation}{' '}
-              · {previewPages.length}{' '}
-              {previewPages.length === 1 ? 'page' : 'pages'})
-            </span>
-            <div className="flex items-center gap-1">
-              {[0.5, 0.65, 0.8, 1].map((z) => (
-                <button
-                  key={z}
-                  onClick={() => setZoom(z)}
-                  className={`rounded px-2 py-0.5 text-[11px] ${
-                    zoom === z
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {Math.round(z * 100)}%
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-auto p-6">
-            <div className="flex flex-col items-center gap-6">
-              {previewPages.map((pageHtml, index) => (
-                <div key={index} className="flex flex-col items-center gap-1.5">
-                  <span className="text-[11px] font-medium text-slate-500">
-                    Page {index + 1} of {previewPages.length}
-                  </span>
-                  <div
-                    style={{
-                      width: pageDims.width * zoom,
-                      height: pageDims.height * zoom,
-                    }}
-                    className="relative overflow-hidden bg-white shadow-md"
-                  >
-                    {compiledHeaderHtml && (
-                      <div
-                        className="pointer-events-none absolute top-2 right-4 left-4 z-10 overflow-hidden"
-                        dangerouslySetInnerHTML={{
-                          __html: resolvePageTokens(
-                            compiledHeaderHtml,
-                            index + 1,
-                            previewPages.length,
-                          ),
-                        }}
-                      />
-                    )}
-
-                    <iframe
-                      title={`Page ${index + 1}`}
-                      srcDoc={pageHtml}
-                      sandbox="allow-same-origin"
-                      style={{
-                        width: pageDims.width,
-                        height: pageDims.height,
-                        transform: `scale(${zoom})`,
-                        transformOrigin: 'top left',
-                      }}
-                      className="border-0"
-                    />
-
-                    {compiledFooterHtml && (
-                      <div
-                        className="pointer-events-none absolute right-4 bottom-2 left-4 z-10 overflow-hidden"
-                        dangerouslySetInnerHTML={{
-                          __html: resolvePageTokens(
-                            compiledFooterHtml,
-                            index + 1,
-                            previewPages.length,
-                          ),
-                        }}
-                      />
-                    )}
+                    ))}
                   </div>
+                )}
+
+                <div className="min-h-0 flex-1">
+                  <Editor
+                    height="100%"
+                    defaultLanguage="html"
+                    value={htmlTemplate}
+                    onChange={(v) => setHtmlTemplate(v ?? '')}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      wordWrap: 'on',
+                    }}
+                  />
                 </div>
-              ))}
+              </div>
+            )}
+
+            {activeTab === 'sql' && (
+              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <button
+                    type="button"
+                    onClick={addQueryRow}
+                    className="inline-flex items-center gap-1.5 rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    Add Query
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleRunAllQueries}
+                    disabled={runningSql || queries.length === 0}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                  >
+                    {runningSql ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Play className="h-3.5 w-3.5" />
+                    )}
+                    Run All Queries
+                  </button>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-500">
+                    Shared Query Parameters (JSON)
+                  </label>
+                  <input
+                    value={sqlParams}
+                    onChange={(e) => setSqlParams(e.target.value)}
+                    placeholder='{"blNo": "SSLSGJKTPAE1373"}'
+                    className="w-full rounded-lg border px-3 py-1.5 font-mono text-xs"
+                  />
+                </div>
+
+                {sqlError && (
+                  <div className="rounded-lg bg-red-50 p-2.5 text-xs text-red-600">
+                    {sqlError}
+                  </div>
+                )}
+
+                {queries.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-6 text-center text-xs text-slate-400">
+                    No SQL queries configured yet. Click &quot;Add Query&quot; to
+                    pull single form values (e.g. <code>bl_header</code>) or
+                    table lists (e.g. <code>containers</code>) from any
+                    DataSource.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {queries.map((q, idx) => {
+                      const res = queryResults[q.key.trim()];
+                      return (
+                        <div
+                          key={idx}
+                          className="space-y-2 rounded-lg border bg-slate-50 p-3"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <input
+                              value={q.key}
+                              onChange={(e) => {
+                                const next = [...queries];
+                                next[idx] = { ...next[idx], key: e.target.value };
+                                setQueries(next);
+                              }}
+                              placeholder="key (e.g. bl_header)"
+                              className="w-36 rounded border bg-white px-2 py-1 font-mono text-xs font-semibold"
+                            />
+
+                            <select
+                              value={q.data_source_id}
+                              onChange={(e) => {
+                                const next = [...queries];
+                                next[idx] = {
+                                  ...next[idx],
+                                  data_source_id: e.target.value,
+                                };
+                                setQueries(next);
+                              }}
+                              className="flex-1 rounded border bg-white px-2 py-1 text-xs"
+                            >
+                              <option value="">-- DataSource --</option>
+                              {datasources.map((ds) => (
+                                <option key={ds.id} value={ds.id}>
+                                  {ds.name} ({ds.client})
+                                </option>
+                              ))}
+                            </select>
+
+                            <select
+                              value={q.result_mode}
+                              onChange={(e) => {
+                                const next = [...queries];
+                                next[idx] = {
+                                  ...next[idx],
+                                  result_mode: e.target.value as
+                                    | 'single'
+                                    | 'list',
+                                };
+                                setQueries(next);
+                              }}
+                              className="rounded border bg-white px-2 py-1 text-xs"
+                            >
+                              <option value="single">Single (1 row)</option>
+                              <option value="list">List (Table)</option>
+                            </select>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setQueries(queries.filter((_, i) => i !== idx))
+                              }
+                              className="text-slate-400 hover:text-red-600"
+                              title="Remove query"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+
+                          <textarea
+                            rows={3}
+                            value={q.sql}
+                            onChange={(e) => {
+                              const next = [...queries];
+                              next[idx] = { ...next[idx], sql: e.target.value };
+                              setQueries(next);
+                            }}
+                            placeholder="SELECT * FROM ... WHERE id = :id"
+                            className="w-full rounded border bg-white px-2.5 py-1.5 font-mono text-xs"
+                          />
+
+                          {res && (
+                            <div className="flex items-center justify-between text-[11px] text-slate-500">
+                              <span>
+                                Returned {res.rows.length} rows ·{' '}
+                                {res.columns.length} cols ({res.durationMs}ms)
+                              </span>
+                              {res.mode === 'list' && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    insertTableForDataset(
+                                      q.key.trim(),
+                                      res.columns,
+                                    )
+                                  }
+                                  className="font-medium text-slate-900 underline"
+                                >
+                                  Insert HTML Table →
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Right Pane: Compact Docked (or Full-Width) Live Preview */}
+        {layoutMode !== 'editor' && (
+          <div
+            className={`flex min-h-0 flex-col overflow-hidden rounded-xl border bg-slate-200 shadow-sm ${
+              layoutMode === 'split'
+                ? 'w-95 shrink-0 xl:w-105'
+                : 'min-w-0 flex-1'
+            }`}
+          >
+            <div className="flex items-center justify-between border-b bg-white px-3 py-2 text-xs font-semibold text-slate-600">
+              <span className="truncate">
+                Preview ({pageSettings.paperSize} · {pageSettings.orientation})
+              </span>
+              <div className="flex shrink-0 items-center gap-1">
+                {[0.45, 0.65, 0.8, 1].map((z) => (
+                  <button
+                    key={z}
+                    onClick={() => setZoom(z)}
+                    className={`rounded px-1.5 py-0.5 text-[10px] ${
+                      zoom === z
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {Math.round(z * 100)}%
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4">
+              <div className="flex flex-col items-center gap-5">
+                {previewPages.map((pageHtml, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-col items-center gap-1.5"
+                  >
+                    <span className="text-[11px] font-medium text-slate-500">
+                      Page {index + 1} of {previewPages.length}
+                    </span>
+                    <div
+                      style={{
+                        width: pageDims.width * zoom,
+                        height: pageDims.height * zoom,
+                      }}
+                      className="relative overflow-hidden bg-white shadow-md"
+                    >
+                      {compiledHeaderHtml && (
+                        <div
+                          className="pointer-events-none absolute top-2 right-4 left-4 z-10 overflow-hidden"
+                          dangerouslySetInnerHTML={{
+                            __html: resolvePageTokens(
+                              compiledHeaderHtml,
+                              index + 1,
+                              previewPages.length,
+                            ),
+                          }}
+                        />
+                      )}
+
+                      <iframe
+                        title={`Page ${index + 1}`}
+                        srcDoc={pageHtml}
+                        sandbox="allow-same-origin"
+                        style={{
+                          width: pageDims.width,
+                          height: pageDims.height,
+                          transform: `scale(${zoom})`,
+                          transformOrigin: 'top left',
+                        }}
+                        className="border-0"
+                      />
+
+                      {compiledFooterHtml && (
+                        <div
+                          className="pointer-events-none absolute right-4 bottom-2 left-4 z-10 overflow-hidden"
+                          dangerouslySetInnerHTML={{
+                            __html: resolvePageTokens(
+                              compiledFooterHtml,
+                              index + 1,
+                              previewPages.length,
+                            ),
+                          }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
